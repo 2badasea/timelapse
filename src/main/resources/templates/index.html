@@ -509,9 +509,9 @@
 
     <!-- 미리보기 카드 -->
     <div class="card preview-section" id="previewSection">
-        <div class="card-title">미리보기 (앞 10초 기준)</div>
+        <div class="card-title">미리보기 (앞 30초 기준)</div>
         <video class="preview-video" id="previewVideo" controls></video>
-        <p class="preview-note" id="previewNote">* 원본 영상의 앞 10초를 선택한 배속으로 재생합니다.</p>
+        <p class="preview-note" id="previewNote">* 원본 영상의 앞 30초를 선택한 배속으로 재생합니다.</p>
     </div>
 
     <!-- 변환 버튼 카드 -->
@@ -699,7 +699,7 @@
     }
 
     /**
-     * 미리보기 생성 요청 - 앞 10초 추출 후 브라우저에서 배속 재생
+     * 미리보기 생성 요청 - 앞 30초 추출 후 브라우저에서 배속 재생
      */
     function generatePreview() {
         document.getElementById('previewBtn').disabled = true;
@@ -725,7 +725,7 @@
                             `* 브라우저 한계로 미리보기는 x16으로 재생됩니다. 실제 저장 파일은 x${currentSpeed}로 변환됩니다.`;
                     } else {
                         document.getElementById('previewNote').textContent =
-                            `* 원본 영상의 앞 10초를 x${currentSpeed} 배속으로 재생 중입니다.`;
+                            `* 원본 영상의 앞 30초를 x${currentSpeed} 배속으로 재생 중입니다.`;
                     }
                 } else {
                     alert('미리보기 생성 실패: ' + data.message);
