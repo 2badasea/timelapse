@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TimeLapse Converter</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0f0f0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* 헤더 */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+        }
+
+        .header h1 span {
+            color: #6366f1;
+        }
+
+        .settings-btn {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            color: #aaa;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .settings-btn:hover {
+            border-color: #6366f1;
+            color: #6366f1;
+        }
+
+        /* 카드 */
+        .card {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+
+        /* 업로드 영역 */
+        .upload-area {
+            border: 2px dashed #333;
+            border-radius: 12px;
+            padding: 50px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #6366f1;
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+
+        .upload-area p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .upload-area p strong {
+            color: #6366f1;
+        }
+
+        .upload-area.uploaded {
+            border-color: #22c55e;
+            background: rgba(34, 197, 94, 0.05);
+        }
+
+        /* 파일 정보 */
+        .file-info {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: #222;
+            border-radius: 10px;
+            margin-top: 16px;
+        }
+
+        .file-info.show { display: flex; }
+
+        .file-info-icon { font-size: 24px; }
+
+        .file-info-text { flex: 1; }
+
+        .file-info-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 2px;
+        }
+
+        .file-info-duration {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* 배속 슬라이더 */
+        .speed-section { margin-bottom: 8px; }
+
+        .speed-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .speed-label { font-size: 14px; color: #aaa; }
+
+        .speed-badge {
+            background: #6366f1;
+            color: #fff;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .slider-container { position: relative; padding: 8px 0; }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #333;
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            background: #6366f1;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 0 4px rgba(99,102,241,0.2);
+            transition: box-shadow 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            box-shadow: 0 0 0 6px rgba(99,102,241,0.3);
+        }
+
+        /* 슬라이더 눈금 라벨 */
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+        }
+
+        .slider-labels span {
+            font-size: 10px;
+            color: #444;
+        }
+
+        /* 예상 길이 표시 */
+        .duration-info {
+            display: flex;
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .duration-box {
+            flex: 1;
+            background: #222;
+            border-radius: 10px;
+            padding: 14px 16px;
+            text-align: center;
+        }
+
+        .duration-box-label {
+            font-size: 11px;
+            color: #555;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .duration-box-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .duration-box.output .duration-box-value {
+            color: #6366f1;
+        }
+
+        /* 미리보기 */
+        .preview-section { display: none; }
+        .preview-section.show { display: block; }
+
+        .preview-video {
+            width: 100%;
+            border-radius: 10px;
+            background: #000;
+            max-height: 400px;
+        }
+
+        .preview-note {
+            font-size: 12px;
+            color: #555;
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        /* 버튼들 */
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 10px;
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .btn-preview {
+            background: #222;
+            border: 1px solid #333;
+            color: #aaa;
+        }
+
+        .btn-preview:hover:not(:disabled) {
+            border-color: #6366f1;
+            color: #6366f1;
+        }
+
+        .btn-convert {
+            background: #6366f1;
+            color: #fff;
+        }
+
+        .btn-convert:hover:not(:disabled) {
+            background: #5254cc;
+        }
+
+        /* 진행 상태 */
+        .progress-section {
+            display: none;
+            margin-top: 16px;
+        }
+
+        .progress-section.show { display: block; }
+
+        .progress-bar-wrap {
+            background: #222;
+            border-radius: 6px;
+            height: 8px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: #6366f1;
+            border-radius: 6px;
+            width: 0%;
+            transition: width 0.3s;
+            animation: progressAnim 2s infinite;
+        }
+
+        @keyframes progressAnim {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        .progress-text {
+            font-size: 13px;
+            color: #666;
+            text-align: center;
+        }
+
+        /* 완료 메시지 */
+        .success-msg {
+            display: none;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 10px;
+            padding: 16px;
+            margin-top: 16px;
+            text-align: center;
+        }
+
+        .success-msg.show { display: block; }
+
+        .success-msg p { font-size: 14px; color: #22c55e; }
+
+        .success-msg span { font-size: 12px; color: #555; display: block; margin-top: 4px; }
+
+        /* 설정 모달 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.show { display: flex; }
+
+        .modal {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 16px;
+            padding: 32px;
+            width: 480px;
+            max-width: 90vw;
+        }
+
+        .modal h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 24px;
+        }
+
+        .form-group { margin-bottom: 20px; }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            width: 100%;
+            background: #222;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .form-group input:focus { border-color: #6366f1; }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+
+        .btn-cancel {
+            background: #222;
+            border: 1px solid #333;
+            color: #aaa;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-save {
+            background: #6366f1;
+            border: none;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- 헤더 -->
+    <div class="header">
+        <h1>TimeLapse <span>Converter</span></h1>
+        <button class="settings-btn" onclick="openSettings()">⚙️ 설정</button>
+    </div>
+
+    <!-- 업로드 카드 -->
+    <div class="card">
+        <div class="card-title">영상 업로드</div>
+
+        <!-- 드래그 앤 드롭 업로드 영역 -->
+        <div class="upload-area" id="uploadArea"
+             onclick="document.getElementById('fileInput').click()"
+             ondragover="handleDragOver(event)"
+             ondragleave="handleDragLeave(event)"
+             ondrop="handleDrop(event)">
+            <div class="upload-icon">🎬</div>
+            <p><strong>클릭하거나 파일을 드래그</strong>하여 업로드</p>
+            <p style="margin-top:6px;">MKV, MP4 지원 · 최대 1개 파일</p>
+        </div>
+
+        <!-- 숨겨진 파일 input -->
+        <input type="file" id="fileInput" accept=".mkv,.mp4" style="display:none;"
+               onchange="handleFileSelect(event)">
+
+        <!-- 업로드된 파일 정보 표시 -->
+        <div class="file-info" id="fileInfo">
+            <div class="file-info-icon">📹</div>
+            <div class="file-info-text">
+                <div class="file-info-name" id="fileName">파일명</div>
+                <div class="file-info-duration" id="fileDuration">길이: --</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 배속 설정 카드 -->
+    <div class="card">
+        <div class="card-title">배속 설정</div>
+
+        <div class="speed-section">
+            <div class="speed-header">
+                <span class="speed-label">재생 배속</span>
+                <span class="speed-badge" id="speedBadge">x1</span>
+            </div>
+
+            <!-- 배속 슬라이더 (0~10 = x1~x1024, 2의 배수 단계) -->
+            <div class="slider-container">
+                <input type="range" id="speedSlider" min="0" max="10" step="1" value="0"
+                       oninput="handleSpeedChange(this.value)">
+            </div>
+
+            <!-- 슬라이더 눈금 라벨 -->
+            <div class="slider-labels">
+                <span>x1</span>
+                <span>x2</span>
+                <span>x4</span>
+                <span>x8</span>
+                <span>x16</span>
+                <span>x32</span>
+                <span>x64</span>
+                <span>x128</span>
+                <span>x256</span>
+                <span>x512</span>
+                <span>x1024</span>
+            </div>
+        </div>
+
+        <!-- 원본/출력 예상 길이 표시 -->
+        <div class="duration-info">
+            <div class="duration-box">
+                <div class="duration-box-label">원본 길이</div>
+                <div class="duration-box-value" id="originalDuration">--</div>
+            </div>
+            <div class="duration-box output">
+                <div class="duration-box-label">예상 출력 길이</div>
+                <div class="duration-box-value" id="outputDuration">--</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 미리보기 카드 -->
+    <div class="card preview-section" id="previewSection">
+        <div class="card-title">미리보기 (앞 10초 기준)</div>
+        <video class="preview-video" id="previewVideo" controls></video>
+        <p class="preview-note" id="previewNote">* 원본 영상의 앞 10초를 선택한 배속으로 재생합니다.</p>
+    </div>
+
+    <!-- 변환 버튼 카드 -->
+    <div class="card">
+        <div class="btn-group">
+            <button class="btn btn-preview" id="previewBtn" disabled onclick="generatePreview()">
+                🎞️ 미리보기
+            </button>
+            <button class="btn btn-convert" id="convertBtn" disabled onclick="startConvert()">
+                ⚡ 저장
+            </button>
+        </div>
+
+        <!-- 변환 진행 표시 -->
+        <div class="progress-section" id="progressSection">
+            <div class="progress-bar-wrap">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <p class="progress-text" id="progressText">변환 중...</p>
+        </div>
+
+        <!-- 완료 메시지 -->
+        <div class="success-msg" id="successMsg">
+            <p>✅ 변환 완료!</p>
+            <span id="successPath"></span>
+        </div>
+    </div>
+
+</div>
+
+<!-- 설정 모달 -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeSettingsOutside(event)">
+    <div class="modal">
+        <h2>⚙️ 설정</h2>
+        <div class="form-group">
+            <label>출력 파일 저장 경로</label>
+            <input type="text" id="outputPathInput" th:value="${outputPath}"
+                   placeholder="예: C:/timelapse-output">
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-cancel" onclick="closeSettings()">취소</button>
+            <button class="btn-save" onclick="saveSettings()">저장</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 배속 단계 배열 (2의 배수)
+    const speedSteps = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
+
+    // 현재 상태 변수
+    let currentSpeed = 1;
+    let currentFilename = '';
+    let originalDurationSec = 0;
+
+    /**
+     * 슬라이더 값이 변경될 때 호출
+     * sliderVal: 0~10 정수 → speedSteps 배열로 실제 배속 계산
+     */
+    function handleSpeedChange(sliderVal) {
+        currentSpeed = speedSteps[parseInt(sliderVal)];
+        document.getElementById('speedBadge').textContent = 'x' + currentSpeed;
+
+        // 파일이 업로드된 상태라면 예상 길이 업데이트
+        if (originalDurationSec > 0) {
+            updateOutputDuration();
+        }
+    }
+
+    /**
+     * 예상 출력 길이 계산 및 화면 표시
+     */
+    function updateOutputDuration() {
+        const outputSec = originalDurationSec / currentSpeed;
+        document.getElementById('outputDuration').textContent = formatDuration(outputSec);
+    }
+
+    /**
+     * 초를 시:분:초 형식으로 변환
+     */
+    function formatDuration(seconds) {
+        if (!seconds || seconds <= 0) return '--';
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = Math.floor(seconds % 60);
+        if (h > 0) return `${h}시간 ${m}분 ${s}초`;
+        if (m > 0) return `${m}분 ${s}초`;
+        return `${s}초`;
+    }
+
+    /**
+     * 파일 선택 시 호출 (input file onchange)
+     */
+    function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (file) uploadFile(file);
+    }
+
+    /**
+     * 드래그 오버 이벤트
+     */
+    function handleDragOver(event) {
+        event.preventDefault();
+        document.getElementById('uploadArea').classList.add('dragover');
+    }
+
+    /**
+     * 드래그 리브 이벤트
+     */
+    function handleDragLeave(event) {
+        document.getElementById('uploadArea').classList.remove('dragover');
+    }
+
+    /**
+     * 드롭 이벤트 (드래그 앤 드롭으로 파일 업로드)
+     */
+    function handleDrop(event) {
+        event.preventDefault();
+        document.getElementById('uploadArea').classList.remove('dragover');
+        const file = event.dataTransfer.files[0];
+        if (file) uploadFile(file);
+    }
+
+    /**
+     * 서버로 파일 업로드 (FormData 사용)
+     */
+    function uploadFile(file) {
+        // 파일 형식 체크
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!['mkv', 'mp4'].includes(ext)) {
+            alert('MKV 또는 MP4 파일만 업로드 가능합니다.');
+            return;
+        }
+
+        currentFilename = file.name;
+
+        // 업로드 UI 상태 변경
+        const uploadArea = document.getElementById('uploadArea');
+        uploadArea.innerHTML = '<div class="upload-icon">⏳</div><p>업로드 중...</p>';
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // 서버로 POST 요청
+        fetch('/upload', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // 업로드 성공
+                    originalDurationSec = data.duration;
+
+                    uploadArea.classList.add('uploaded');
+                    uploadArea.innerHTML = '<div class="upload-icon">✅</div><p><strong>' + data.filename + '</strong></p><p style="margin-top:6px;">업로드 완료</p>';
+
+                    // 파일 정보 표시
+                    document.getElementById('fileInfo').classList.add('show');
+                    document.getElementById('fileName').textContent = data.filename;
+                    document.getElementById('fileDuration').textContent = '길이: ' + formatDuration(data.duration);
+                    document.getElementById('originalDuration').textContent = formatDuration(data.duration);
+
+                    // 예상 길이 업데이트
+                    updateOutputDuration();
+
+                    // 버튼 활성화
+                    document.getElementById('previewBtn').disabled = false;
+                    document.getElementById('convertBtn').disabled = false;
+                } else {
+                    alert('업로드 실패: ' + data.message);
+                    resetUploadArea();
+                }
+            })
+            .catch(err => {
+                alert('업로드 중 오류가 발생했습니다.');
+                resetUploadArea();
+            });
+    }
+
+    /**
+     * 업로드 영역 초기 상태로 복원
+     */
+    function resetUploadArea() {
+        const uploadArea = document.getElementById('uploadArea');
+        uploadArea.classList.remove('uploaded', 'dragover');
+        uploadArea.innerHTML = '<div class="upload-icon">🎬</div><p><strong>클릭하거나 파일을 드래그</strong>하여 업로드</p><p style="margin-top:6px;">MKV, MP4 지원 · 최대 1개 파일</p>';
+    }
+
+    /**
+     * 미리보기 생성 요청 - 앞 10초 추출 후 브라우저에서 배속 재생
+     */
+    function generatePreview() {
+        document.getElementById('previewBtn').disabled = true;
+        document.getElementById('previewBtn').textContent = '⏳ 생성 중...';
+
+        fetch('/preview', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const video = document.getElementById('previewVideo');
+                    // 브라우저 재생속도 최대 16배속까지 지원
+                    const browserSpeed = Math.min(currentSpeed, 16);
+                    video.src = '/preview/stream?t=' + Date.now();
+                    video.onloadedmetadata = function() {
+                        video.playbackRate = browserSpeed;
+                        video.play();
+                    };
+                    document.getElementById('previewSection').classList.add('show');
+
+                    // 16배속 초과 시 안내 메시지
+                    if (currentSpeed > 16) {
+                        document.getElementById('previewNote').textContent =
+                            `* 브라우저 한계로 미리보기는 x16으로 재생됩니다. 실제 저장 파일은 x${currentSpeed}로 변환됩니다.`;
+                    } else {
+                        document.getElementById('previewNote').textContent =
+                            `* 원본 영상의 앞 10초를 x${currentSpeed} 배속으로 재생 중입니다.`;
+                    }
+                } else {
+                    alert('미리보기 생성 실패: ' + data.message);
+                }
+                document.getElementById('previewBtn').disabled = false;
+                document.getElementById('previewBtn').textContent = '🎞️ 미리보기';
+            })
+            .catch(() => {
+                alert('미리보기 중 오류가 발생했습니다.');
+                document.getElementById('previewBtn').disabled = false;
+                document.getElementById('previewBtn').textContent = '🎞️ 미리보기';
+            });
+    }
+
+    /**
+     * 최종 변환 시작 + SSE로 진행률 실시간 수신
+     */
+    function startConvert() {
+        document.getElementById('convertBtn').disabled = true;
+        document.getElementById('previewBtn').disabled = true;
+        document.getElementById('progressSection').classList.add('show');
+        document.getElementById('progressBar').style.width = '0%';
+        document.getElementById('progressText').textContent = '변환 준비 중...';
+        document.getElementById('successMsg').classList.remove('show');
+
+        // 변환 요청 (서버에서 별도 스레드로 변환 시작)
+        fetch('/convert?speed=' + currentSpeed + '&filename=' + encodeURIComponent(currentFilename), { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    alert('변환 실패: ' + data.message);
+                    document.getElementById('progressSection').classList.remove('show');
+                    document.getElementById('convertBtn').disabled = false;
+                    document.getElementById('previewBtn').disabled = false;
+                    return;
+                }
+
+                // SSE로 진행률 실시간 수신
+                const evtSource = new EventSource('/progress');
+
+                evtSource.onmessage = function(e) {
+                    const progress = parseInt(e.data);
+                    document.getElementById('progressBar').style.width = progress + '%';
+
+                    if (progress < 100) {
+                        document.getElementById('progressText').textContent = '변환 중... ' + progress + '%';
+                    } else {
+                        // 변환 완료
+                        document.getElementById('progressText').textContent = '완료!';
+                        evtSource.close();
+
+                        // 완료 후 출력 경로 가져오기
+                        fetch('/outputPath')
+                            .then(res => res.json())
+                            .then(pathData => {
+                                document.getElementById('progressSection').classList.remove('show');
+                                document.getElementById('successMsg').classList.add('show');
+                                document.getElementById('successPath').textContent =
+                                    '저장 경로: ' + pathData.outputPath;
+                            });
+
+                        document.getElementById('convertBtn').disabled = false;
+                        document.getElementById('previewBtn').disabled = false;
+                    }
+                };
+
+                evtSource.onerror = function() {
+                    evtSource.close();
+                    document.getElementById('progressSection').classList.remove('show');
+                    document.getElementById('convertBtn').disabled = false;
+                    document.getElementById('previewBtn').disabled = false;
+                };
+            })
+            .catch(() => {
+                alert('변환 요청 중 오류가 발생했습니다.');
+                document.getElementById('progressSection').classList.remove('show');
+                document.getElementById('convertBtn').disabled = false;
+                document.getElementById('previewBtn').disabled = false;
+            });
+    }
+
+    /**
+     * 설정 모달 열기
+     */
+    function openSettings() {
+        document.getElementById('modalOverlay').classList.add('show');
+    }
+
+    /**
+     * 설정 모달 닫기
+     */
+    function closeSettings() {
+        document.getElementById('modalOverlay').classList.remove('show');
+    }
+
+    /**
+     * 모달 바깥 클릭 시 닫기
+     */
+    function closeSettingsOutside(event) {
+        if (event.target === document.getElementById('modalOverlay')) {
+            closeSettings();
+        }
+    }
+
+    /**
+     * 설정 저장 요청
+     */
+    function saveSettings() {
+        const outputPath = document.getElementById('outputPathInput').value.trim();
+        if (!outputPath) {
+            alert('출력 경로를 입력해주세요.');
+            return;
+        }
+
+        fetch('/settings?outputPath=' + encodeURIComponent(outputPath), { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    closeSettings();
+                    alert('설정이 저장되었습니다.');
+                } else {
+                    alert('설정 저장 실패: ' + data.message);
+                }
+            });
+    }
+</script>
+</body>
+</html>
