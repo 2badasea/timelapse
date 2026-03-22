@@ -10,11 +10,35 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "app")
 public class VideoConfig {
 
+    // OBS 녹화 파일이 저장된 소스 폴더 경로
+    private String sourcePath = "D:/OBS/RECORDING";
+
+    // 임시 파일이 저장될 경로
+    private String tempPath = "D:/OBS/timelapse-temp";
+
     // 출력 파일이 저장될 경로 (사용자가 설정 화면에서 변경 가능)
-    private String outputPath = "C:/timelapse-output";
+    private String outputPath = "D:/OBS/timelapse-output";
 
     // FFmpeg 실행 파일 경로 (기본값: 시스템 PATH에 등록된 ffmpeg)
     private String ffmpegPath = "ffmpeg";
+
+    // sourcePath getter/setter
+    public String getSourcePath() {
+        return sourcePath;
+    }
+
+    public void setSourcePath(String sourcePath) {
+        this.sourcePath = sourcePath;
+    }
+
+    // tempPath getter/setter
+    public String getTempPath() {
+        return tempPath;
+    }
+
+    public void setTempPath(String tempPath) {
+        this.tempPath = tempPath;
+    }
 
     // outputPath getter/setter
     public String getOutputPath() {

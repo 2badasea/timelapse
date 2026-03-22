@@ -4,7 +4,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,26 +25,42 @@ public class VideoController {
      */
     @GetMapping("/")
     public String index(Model model) {
-        // 현재 출력 경로를 화면에 전달
         model.addAttribute("outputPath", videoService.getOutputPath());
-        return "index"; // templates/index.html 렌더링
+        model.addAttribute("sourcePath", videoService.getSourcePath());
+        return "index";
     }
 
     /**
-     * 영상 파일 업로드 처리 (POST /upload)
-     * 파일을 임시 저장하고 영상 길이를 반환
+     * 소스 폴더의 영상 파일 목록 반환 (GET /files)
      */
-    @PostMapping("/upload")
+    @GetMapping("/files")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> uploadVideo(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Map<String, Object>> listFiles() {
         Map<String, Object> response = new HashMap<>();
         try {
-            videoService.uploadVideo(file);
+            response.put("success", true);
+            response.put("files", videoService.listSourceFiles());
+            response.put("sourcePath", videoService.getSourcePath());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
 
-            // 업로드 성공 시 영상 길이와 파일명 반환
+    /**
+     * 파일 경로로 직접 선택 (POST /select?path=경로)
+     */
+    @PostMapping("/select")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> selectFile(@RequestParam String path) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            videoService.selectFile(path);
             response.put("success", true);
             response.put("duration", videoService.getOriginalDurationSeconds());
-            response.put("filename", file.getOriginalFilename());
+            response.put("filename", new java.io.File(path).getName());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);
@@ -183,16 +198,18 @@ public class VideoController {
     }
 
     /**
-     * 출력 경로 설정 변경 (POST /settings?outputPath=경로)
+     * 설정 변경 (POST /settings)
      */
     @PostMapping("/settings")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> updateSettings(@RequestParam String outputPath) {
+    public ResponseEntity<Map<String, Object>> updateSettings(
+            @RequestParam String outputPath,
+            @RequestParam String sourcePath) {
         Map<String, Object> response = new HashMap<>();
         try {
             videoService.updateOutputPath(outputPath);
+            videoService.updateSourcePath(sourcePath);
             response.put("success", true);
-            response.put("outputPath", outputPath);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);

@@ -73,50 +73,103 @@
             margin-bottom: 20px;
         }
 
-        /* 업로드 영역 */
-        .upload-area {
-            border: 2px dashed #333;
-            border-radius: 12px;
-            padding: 50px 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
+        /* 소스 폴더 바 */
+        .source-folder-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #222;
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 14px;
+            gap: 12px;
         }
 
-        .upload-area:hover, .upload-area.dragover {
-            border-color: #6366f1;
-            background: rgba(99, 102, 241, 0.05);
-        }
-
-        .upload-icon {
-            font-size: 40px;
-            margin-bottom: 12px;
-        }
-
-        .upload-area p {
+        .source-folder-bar span {
+            font-size: 12px;
             color: #666;
-            font-size: 14px;
-            line-height: 1.6;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
-        .upload-area p strong {
-            color: #6366f1;
+        .refresh-btn {
+            background: none;
+            border: 1px solid #333;
+            color: #666;
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            white-space: nowrap;
+            transition: all 0.2s;
+            flex-shrink: 0;
         }
 
-        .upload-area.uploaded {
-            border-color: #22c55e;
-            background: rgba(34, 197, 94, 0.05);
+        .refresh-btn:hover { border-color: #6366f1; color: #6366f1; }
+
+        /* 파일 목록 */
+        .file-list {
+            max-height: 280px;
+            overflow-y: auto;
+            border-radius: 10px;
+            border: 1px solid #2a2a2a;
         }
 
-        /* 파일 정보 */
+        .file-list::-webkit-scrollbar { width: 6px; }
+        .file-list::-webkit-scrollbar-track { background: #1a1a1a; }
+        .file-list::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #222;
+            transition: background 0.15s;
+            gap: 12px;
+        }
+
+        .file-item:last-child { border-bottom: none; }
+        .file-item:hover { background: rgba(99, 102, 241, 0.07); }
+        .file-item.selected { background: rgba(99, 102, 241, 0.15); border-left: 3px solid #6366f1; }
+
+        .file-item-icon { font-size: 20px; flex-shrink: 0; }
+
+        .file-item-info { flex: 1; min-width: 0; }
+
+        .file-item-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: #ddd;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-bottom: 3px;
+        }
+
+        .file-item-meta {
+            font-size: 11px;
+            color: #555;
+        }
+
+        .file-list-empty {
+            padding: 40px 20px;
+            text-align: center;
+            color: #444;
+            font-size: 13px;
+        }
+
+        /* 선택된 파일 정보 */
         .file-info {
             display: none;
             align-items: center;
             gap: 12px;
             padding: 14px 16px;
-            background: #222;
+            background: rgba(34, 197, 94, 0.08);
+            border: 1px solid rgba(34, 197, 94, 0.2);
             border-radius: 10px;
-            margin-top: 16px;
+            margin-top: 14px;
         }
 
         .file-info.show { display: flex; }
@@ -195,6 +248,8 @@
         .slider-labels span {
             font-size: 10px;
             color: #444;
+            flex: 0 0 22px;
+            text-align: center;
         }
 
         /* 예상 길이 표시 */
@@ -433,28 +488,24 @@
         <button class="settings-btn" onclick="openSettings()">⚙️ 설정</button>
     </div>
 
-    <!-- 업로드 카드 -->
+    <!-- 파일 선택 카드 -->
     <div class="card">
-        <div class="card-title">영상 업로드</div>
+        <div class="card-title">녹화 파일 선택</div>
 
-        <!-- 드래그 앤 드롭 업로드 영역 -->
-        <div class="upload-area" id="uploadArea"
-             onclick="document.getElementById('fileInput').click()"
-             ondragover="handleDragOver(event)"
-             ondragleave="handleDragLeave(event)"
-             ondrop="handleDrop(event)">
-            <div class="upload-icon">🎬</div>
-            <p><strong>클릭하거나 파일을 드래그</strong>하여 업로드</p>
-            <p style="margin-top:6px;">MKV, MP4 지원 · 최대 1개 파일</p>
+        <!-- 소스 폴더 경로 + 새로고침 -->
+        <div class="source-folder-bar">
+            <span id="sourceFolderPath" th:text="${sourcePath}">D:/OBS/RECORDING</span>
+            <button class="refresh-btn" onclick="loadFileList()">↻ 새로고침</button>
         </div>
 
-        <!-- 숨겨진 파일 input -->
-        <input type="file" id="fileInput" accept=".mkv,.mp4" style="display:none;"
-               onchange="handleFileSelect(event)">
+        <!-- 파일 목록 -->
+        <div class="file-list" id="fileList">
+            <div class="file-list-empty">새로고침을 눌러 파일 목록을 불러오세요</div>
+        </div>
 
-        <!-- 업로드된 파일 정보 표시 -->
+        <!-- 선택된 파일 정보 -->
         <div class="file-info" id="fileInfo">
-            <div class="file-info-icon">📹</div>
+            <div class="file-info-icon">✅</div>
             <div class="file-info-text">
                 <div class="file-info-name" id="fileName">파일명</div>
                 <div class="file-info-duration" id="fileDuration">길이: --</div>
@@ -547,9 +598,14 @@
     <div class="modal">
         <h2>⚙️ 설정</h2>
         <div class="form-group">
+            <label>OBS 녹화 폴더 경로</label>
+            <input type="text" id="sourcePathInput" th:value="${sourcePath}"
+                   placeholder="예: D:/OBS/RECORDING">
+        </div>
+        <div class="form-group">
             <label>출력 파일 저장 경로</label>
             <input type="text" id="outputPathInput" th:value="${outputPath}"
-                   placeholder="예: C:/timelapse-output">
+                   placeholder="예: D:/OBS/timelapse-output">
         </div>
         <div class="modal-buttons">
             <button class="btn-cancel" onclick="closeSettings()">취소</button>
@@ -566,16 +622,105 @@
     let currentSpeed = 1;
     let currentFilename = '';
     let originalDurationSec = 0;
+    let selectedFilePath = '';
+
+    /**
+     * 페이지 로드 시 파일 목록 자동 로드
+     */
+    window.onload = function() {
+        loadFileList();
+    };
+
+    /**
+     * 소스 폴더의 파일 목록 로드
+     */
+    function loadFileList() {
+        const fileList = document.getElementById('fileList');
+        fileList.innerHTML = '<div class="file-list-empty">불러오는 중...</div>';
+
+        fetch('/files')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('sourceFolderPath').textContent = data.sourcePath;
+
+                if (!data.success || data.files.length === 0) {
+                    fileList.innerHTML = '<div class="file-list-empty">녹화 파일이 없습니다</div>';
+                    return;
+                }
+
+                fileList.innerHTML = data.files.map(f => `
+                    <div class="file-item" id="item-${btoa(encodeURIComponent(f.path)).substring(0,20)}"
+                         onclick="selectFile('${f.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', this)">
+                        <div class="file-item-icon">🎬</div>
+                        <div class="file-item-info">
+                            <div class="file-item-name">${f.name}</div>
+                            <div class="file-item-meta">${formatFileSize(f.size)} · ${formatDate(f.lastModified)}</div>
+                        </div>
+                    </div>
+                `).join('');
+            })
+            .catch(() => {
+                fileList.innerHTML = '<div class="file-list-empty">폴더를 불러올 수 없습니다</div>';
+            });
+    }
+
+    /**
+     * 파일 선택
+     */
+    function selectFile(filePath, element) {
+        // 이전 선택 해제
+        document.querySelectorAll('.file-item.selected').forEach(el => el.classList.remove('selected'));
+        element.classList.add('selected');
+
+        selectedFilePath = filePath;
+        const filename = filePath.split(/[\\/]/).pop();
+
+        fetch('/select?path=' + encodeURIComponent(filePath), { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    currentFilename = data.filename;
+                    originalDurationSec = data.duration;
+
+                    document.getElementById('fileInfo').classList.add('show');
+                    document.getElementById('fileName').textContent = data.filename;
+                    document.getElementById('fileDuration').textContent = '길이: ' + formatDuration(data.duration);
+                    document.getElementById('originalDuration').textContent = formatDuration(data.duration);
+                    updateOutputDuration();
+
+                    document.getElementById('previewBtn').disabled = false;
+                    document.getElementById('convertBtn').disabled = false;
+                } else {
+                    alert('파일 선택 실패: ' + data.message);
+                }
+            })
+            .catch(() => alert('파일 선택 중 오류가 발생했습니다.'));
+    }
+
+    /**
+     * 파일 크기 포맷
+     */
+    function formatFileSize(bytes) {
+        if (bytes >= 1024 * 1024 * 1024) return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+        if (bytes >= 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        return (bytes / 1024).toFixed(1) + ' KB';
+    }
+
+    /**
+     * 날짜 포맷
+     */
+    function formatDate(timestamp) {
+        const d = new Date(timestamp);
+        return d.toLocaleDateString('ko-KR') + ' ' + d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    }
 
     /**
      * 슬라이더 값이 변경될 때 호출
-     * sliderVal: 0~10 정수 → speedSteps 배열로 실제 배속 계산
      */
     function handleSpeedChange(sliderVal) {
         currentSpeed = speedSteps[parseInt(sliderVal)];
         document.getElementById('speedBadge').textContent = 'x' + currentSpeed;
 
-        // 파일이 업로드된 상태라면 예상 길이 업데이트
         if (originalDurationSec > 0) {
             updateOutputDuration();
         }
@@ -600,102 +745,6 @@
         if (h > 0) return `${h}시간 ${m}분 ${s}초`;
         if (m > 0) return `${m}분 ${s}초`;
         return `${s}초`;
-    }
-
-    /**
-     * 파일 선택 시 호출 (input file onchange)
-     */
-    function handleFileSelect(event) {
-        const file = event.target.files[0];
-        if (file) uploadFile(file);
-    }
-
-    /**
-     * 드래그 오버 이벤트
-     */
-    function handleDragOver(event) {
-        event.preventDefault();
-        document.getElementById('uploadArea').classList.add('dragover');
-    }
-
-    /**
-     * 드래그 리브 이벤트
-     */
-    function handleDragLeave(event) {
-        document.getElementById('uploadArea').classList.remove('dragover');
-    }
-
-    /**
-     * 드롭 이벤트 (드래그 앤 드롭으로 파일 업로드)
-     */
-    function handleDrop(event) {
-        event.preventDefault();
-        document.getElementById('uploadArea').classList.remove('dragover');
-        const file = event.dataTransfer.files[0];
-        if (file) uploadFile(file);
-    }
-
-    /**
-     * 서버로 파일 업로드 (FormData 사용)
-     */
-    function uploadFile(file) {
-        // 파일 형식 체크
-        const ext = file.name.split('.').pop().toLowerCase();
-        if (!['mkv', 'mp4'].includes(ext)) {
-            alert('MKV 또는 MP4 파일만 업로드 가능합니다.');
-            return;
-        }
-
-        currentFilename = file.name;
-
-        // 업로드 UI 상태 변경
-        const uploadArea = document.getElementById('uploadArea');
-        uploadArea.innerHTML = '<div class="upload-icon">⏳</div><p>업로드 중...</p>';
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        // 서버로 POST 요청
-        fetch('/upload', { method: 'POST', body: formData })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    // 업로드 성공
-                    originalDurationSec = data.duration;
-
-                    uploadArea.classList.add('uploaded');
-                    uploadArea.innerHTML = '<div class="upload-icon">✅</div><p><strong>' + data.filename + '</strong></p><p style="margin-top:6px;">업로드 완료</p>';
-
-                    // 파일 정보 표시
-                    document.getElementById('fileInfo').classList.add('show');
-                    document.getElementById('fileName').textContent = data.filename;
-                    document.getElementById('fileDuration').textContent = '길이: ' + formatDuration(data.duration);
-                    document.getElementById('originalDuration').textContent = formatDuration(data.duration);
-
-                    // 예상 길이 업데이트
-                    updateOutputDuration();
-
-                    // 버튼 활성화
-                    document.getElementById('previewBtn').disabled = false;
-                    document.getElementById('convertBtn').disabled = false;
-                } else {
-                    alert('업로드 실패: ' + data.message);
-                    resetUploadArea();
-                }
-            })
-            .catch(err => {
-                alert('업로드 중 오류가 발생했습니다.');
-                resetUploadArea();
-            });
-    }
-
-    /**
-     * 업로드 영역 초기 상태로 복원
-     */
-    function resetUploadArea() {
-        const uploadArea = document.getElementById('uploadArea');
-        uploadArea.classList.remove('uploaded', 'dragover');
-        uploadArea.innerHTML = '<div class="upload-icon">🎬</div><p><strong>클릭하거나 파일을 드래그</strong>하여 업로드</p><p style="margin-top:6px;">MKV, MP4 지원 · 최대 1개 파일</p>';
     }
 
     /**
@@ -834,18 +883,21 @@
      * 설정 저장 요청
      */
     function saveSettings() {
+        const sourcePath = document.getElementById('sourcePathInput').value.trim();
         const outputPath = document.getElementById('outputPathInput').value.trim();
-        if (!outputPath) {
-            alert('출력 경로를 입력해주세요.');
+        if (!sourcePath || !outputPath) {
+            alert('경로를 모두 입력해주세요.');
             return;
         }
 
-        fetch('/settings?outputPath=' + encodeURIComponent(outputPath), { method: 'POST' })
+        const params = new URLSearchParams({ sourcePath, outputPath });
+        fetch('/settings?' + params.toString(), { method: 'POST' })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
+                    document.getElementById('sourceFolderPath').textContent = sourcePath;
                     closeSettings();
-                    alert('설정이 저장되었습니다.');
+                    loadFileList();
                 } else {
                     alert('설정 저장 실패: ' + data.message);
                 }

@@ -1,14 +1,14 @@
 package com.bada.timelapse;
 
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.UUID;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * FFmpeg를 호출하여 실제 영상 처리를 담당하는 서비스 클래스
@@ -19,7 +19,7 @@ public class VideoService {
     private final VideoConfig videoConfig;
 
     // 업로드된 원본 파일을 임시 저장할 경로
-    private static final String TEMP_DIR = System.getProperty("java.io.tmpdir") + "/timelapse/";
+    private final String TEMP_DIR;
 
     // 현재 업로드된 원본 파일 경로 (1개만 유지)
     private String currentUploadedFilePath = null;
@@ -32,6 +32,7 @@ public class VideoService {
     
     public VideoService(VideoConfig videoConfig) {
         this.videoConfig = videoConfig;
+        this.TEMP_DIR = videoConfig.getTempPath() + "/";
         // 서버 시작 시 임시 폴더 자동 비우기
         clearTempDirectory();
     }
@@ -54,29 +55,40 @@ public class VideoService {
     }
 
     /**
-     * 업로드된 영상 파일을 임시 저장하고 영상 길이를 추출
+     * 소스 폴더의 mkv/mp4 파일 목록을 최신순으로 반환
      */
-    public String uploadVideo(MultipartFile file) throws IOException {
-        // 임시 디렉토리 생성
-        File tempDir = new File(TEMP_DIR);
-        if (!tempDir.exists()) tempDir.mkdirs();
+    public List<Map<String, Object>> listSourceFiles() {
+        File sourceDir = new File(videoConfig.getSourcePath());
+        List<Map<String, Object>> files = new ArrayList<>();
+        if (!sourceDir.exists() || !sourceDir.isDirectory()) return files;
 
-        // 기존 업로드 파일 삭제 (1개만 유지)
-        if (currentUploadedFilePath != null) {
-            new File(currentUploadedFilePath).delete();
+        File[] videoFiles = sourceDir.listFiles((dir, name) -> {
+            String lower = name.toLowerCase();
+            return lower.endsWith(".mkv") || lower.endsWith(".mp4");
+        });
+
+        if (videoFiles != null) {
+            Arrays.sort(videoFiles, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+            for (File f : videoFiles) {
+                Map<String, Object> info = new HashMap<>();
+                info.put("name", f.getName());
+                info.put("size", f.length());
+                info.put("path", f.getAbsolutePath());
+                info.put("lastModified", f.lastModified());
+                files.add(info);
+            }
         }
+        return files;
+    }
 
-        // 원본 파일명 유지하면서 UUID로 중복 방지
-        String filename = UUID.randomUUID() + "_" + file.getOriginalFilename();
-        Path savePath = Paths.get(TEMP_DIR + filename);
-        Files.write(savePath, file.getBytes());
-
-        currentUploadedFilePath = savePath.toString();
-
-        // FFmpeg로 영상 길이 추출
-        originalDurationSeconds = extractDuration(currentUploadedFilePath);
-
-        return currentUploadedFilePath;
+    /**
+     * 파일 경로로 직접 선택 - 복사 없이 경로만 저장하고 영상 길이 추출
+     */
+    public void selectFile(String filePath) throws IOException {
+        File file = new File(filePath);
+        if (!file.exists()) throw new IllegalArgumentException("파일을 찾을 수 없습니다: " + filePath);
+        currentUploadedFilePath = filePath;
+        originalDurationSeconds = extractDuration(filePath);
     }
 
     /**
@@ -225,6 +237,15 @@ public class VideoService {
     // 원본 영상 길이 반환
     public double getOriginalDurationSeconds() {
         return originalDurationSeconds;
+    }
+
+    // 소스 경로 업데이트
+    public void updateSourcePath(String newPath) {
+        videoConfig.setSourcePath(newPath);
+    }
+
+    public String getSourcePath() {
+        return videoConfig.getSourcePath();
     }
 
     // 출력 경로 업데이트 (설정 화면에서 변경 시 사용)
