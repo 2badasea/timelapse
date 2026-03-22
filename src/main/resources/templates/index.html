@@ -252,6 +252,55 @@
             text-align: center;
         }
 
+        /* 예상 소요 시간 + 키프레임 안내 */
+        .speed-meta {
+            margin-top: 16px;
+            display: none;
+            gap: 10px;
+            flex-direction: column;
+        }
+
+        .speed-meta.show { display: flex; }
+
+        .estimated-time-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #222;
+            border-radius: 10px;
+            padding: 12px 16px;
+        }
+
+        .estimated-time-icon { font-size: 16px; }
+
+        .estimated-time-label {
+            font-size: 11px;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+
+        .estimated-time-value {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .keyframe-notice {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(99, 102, 241, 0.08);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 12px;
+            color: #8b8ef5;
+        }
+
+        .keyframe-notice-icon { font-size: 14px; }
+
         /* 예상 길이 표시 */
         .duration-info {
             display: flex;
@@ -523,9 +572,9 @@
                 <span class="speed-badge" id="speedBadge">x1</span>
             </div>
 
-            <!-- 배속 슬라이더 (0~10 = x1~x1024, 2의 배수 단계) -->
+            <!-- 배속 슬라이더 (0~12 = x1~x4096, 2의 배수 단계) -->
             <div class="slider-container">
-                <input type="range" id="speedSlider" min="0" max="10" step="1" value="0"
+                <input type="range" id="speedSlider" min="0" max="12" step="1" value="0"
                        oninput="handleSpeedChange(this.value)">
             </div>
 
@@ -542,6 +591,8 @@
                 <span>x256</span>
                 <span>x512</span>
                 <span>x1024</span>
+                <span>x2048</span>
+                <span>x4096</span>
             </div>
         </div>
 
@@ -554,6 +605,21 @@
             <div class="duration-box output">
                 <div class="duration-box-label">예상 출력 길이</div>
                 <div class="duration-box-value" id="outputDuration">--</div>
+            </div>
+        </div>
+
+        <!-- 예상 소요 시간 + 키프레임 안내 -->
+        <div class="speed-meta" id="speedMeta">
+            <div class="estimated-time-box">
+                <div class="estimated-time-icon">⏱</div>
+                <div>
+                    <div class="estimated-time-label">예상 작업 소요시간 (사양에 따라 다를 수 있음)</div>
+                    <div class="estimated-time-value" id="estimatedTimeValue">--</div>
+                </div>
+            </div>
+            <div class="keyframe-notice" id="keyframeNotice" style="display:none">
+                <span class="keyframe-notice-icon">⚡</span>
+                <span>x128 이상 — 키프레임 고속 모드 적용. I-frame만 디코딩하여 처리 속도가 크게 향상됩니다.</span>
             </div>
         </div>
     </div>
@@ -616,7 +682,7 @@
 
 <script>
     // 배속 단계 배열 (2의 배수)
-    const speedSteps = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
+    const speedSteps = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096];
 
     // 현재 상태 변수
     let currentSpeed = 1;
@@ -727,11 +793,24 @@
     }
 
     /**
-     * 예상 출력 길이 계산 및 화면 표시
+     * 예상 출력 길이 + 예상 소요 시간 + 키프레임 모드 안내 표시
      */
     function updateOutputDuration() {
         const outputSec = originalDurationSec / currentSpeed;
         document.getElementById('outputDuration').textContent = formatDuration(outputSec);
+
+        // 예상 소요 시간 계산 (서버 사양에 따라 다름)
+        // 128배속 이상: 키프레임 모드 (~300배속 처리), 미만: 풀 디코딩 (~30배속 처리)
+        const useKeyframeMode = currentSpeed >= 128;
+        const estimatedSec = useKeyframeMode
+            ? originalDurationSec / 300
+            : originalDurationSec / 30;
+
+        document.getElementById('estimatedTimeValue').textContent = formatDuration(estimatedSec);
+        document.getElementById('speedMeta').classList.add('show');
+
+        // 키프레임 안내 표시/숨김
+        document.getElementById('keyframeNotice').style.display = useKeyframeMode ? 'flex' : 'none';
     }
 
     /**

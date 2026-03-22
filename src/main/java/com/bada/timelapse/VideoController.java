@@ -70,7 +70,7 @@ public class VideoController {
     }
 
     /**
-     * 예상 출력 길이 계산 (GET /duration?speed=숫자)
+     * 예상 출력 길이 + 예상 처리 시간 + 모드 정보 반환 (GET /duration?speed=숫자)
      */
     @GetMapping("/duration")
     @ResponseBody
@@ -78,8 +78,12 @@ public class VideoController {
         Map<String, Object> response = new HashMap<>();
         try {
             double outputDuration = videoService.calculateOutputDuration(speed);
+            double estimatedSeconds = videoService.calculateEstimatedProcessingSeconds(speed);
+            boolean useKeyframeMode = speed >= 128;
             response.put("success", true);
             response.put("outputDuration", outputDuration);
+            response.put("estimatedSeconds", estimatedSeconds);
+            response.put("useKeyframeMode", useKeyframeMode);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);

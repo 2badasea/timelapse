@@ -152,7 +152,23 @@ public class VideoService {
     }
 
     /**
+     * 배속에 따른 예상 처리 소요 시간(초) 계산
+     * - 128배속 이상: 키프레임만 디코딩 (약 300배속 처리속도)
+     * - 128배속 미만: 전체 프레임 디코딩 (CUDA 기준 약 30배속 처리속도)
+     */
+    public double calculateEstimatedProcessingSeconds(int speed) {
+        if (originalDurationSeconds <= 0) return 0;
+        if (speed >= 128) {
+            return originalDurationSeconds / 300.0;
+        } else {
+            return originalDurationSeconds / 30.0;
+        }
+    }
+
+    /**
      * 전체 영상을 선택한 배속으로 변환 (CUDA 하드웨어 가속 + 진행률 계산)
+     * - 128배속 이상: 키프레임(I-frame)만 디코딩하는 고속 모드
+     * - 128배속 미만: 전체 프레임 디코딩 후 N번째 프레임 선택
      */
     public String convertVideo(int speed, String originalFilename) throws IOException, InterruptedException {
         if (currentUploadedFilePath == null) throw new IllegalStateException("업로드된 파일이 없습니다.");
@@ -163,20 +179,49 @@ public class VideoService {
         String baseName = originalFilename.replaceAll("\\.[^.]+$", "");
         String outputPath = videoConfig.getOutputPath() + "/" + baseName + "_" + speed + "x.mp4";
 
-        ProcessBuilder pb = new ProcessBuilder(
-                videoConfig.getFfmpegPath(),
-                "-y",
-                "-hwaccel", "cuda",
-                "-i", currentUploadedFilePath,
-                "-vf", "setpts=PTS/" + speed,
-                "-an",
-                "-c:v", "h264_nvenc",
-                "-cq", "18",
-                "-preset", "p4",
-                "-progress", "pipe:1",         // 진행률을 표준출력으로 출력
-                "-nostats",
-                outputPath
-        );
+        boolean useKeyframeMode = speed >= 128;
+
+        List<String> command = new ArrayList<>();
+        command.add(videoConfig.getFfmpegPath());
+        command.add("-y");
+        command.add("-hwaccel");
+        command.add("cuda");
+        if (useKeyframeMode) {
+            // GPU 메모리에서 바로 인코딩 (CPU↔GPU 전송 제거)
+            command.add("-hwaccel_output_format");
+            command.add("cuda");
+            // I-frame(키프레임)만 디코딩
+            command.add("-skip_frame");
+            command.add("noref");
+            // 데모서 수준에서 키프레임 외 패킷 자체를 디스크에서 읽지 않음 → I/O 대폭 감소
+            command.add("-discard");
+            command.add("noref");
+        }
+        command.add("-i");
+        command.add(currentUploadedFilePath);
+        command.add("-vf");
+        if (useKeyframeMode) {
+            // 키프레임 PTS를 speed로 나눠 타임스탬프 조정, -r 30으로 출력 프레임레이트 고정
+            command.add("setpts=PTS/" + speed);
+            command.add("-r");
+            command.add("30");
+        } else {
+            // speed번째마다 1프레임 선택 후 타임스탬프 재설정
+            command.add("select=not(mod(n\\," + speed + ")),setpts=N/FRAME_RATE/TB");
+        }
+        command.add("-an");
+        command.add("-c:v");
+        command.add("h264_nvenc");
+        command.add("-cq");
+        command.add("18");
+        command.add("-preset");
+        command.add("p4");
+        command.add("-progress");
+        command.add("pipe:1");
+        command.add("-nostats");
+        command.add(outputPath);
+
+        ProcessBuilder pb = new ProcessBuilder(command);
         pb.redirectErrorStream(false);         // 진행률 파싱을 위해 false로 설정
         Process process = pb.start();
 
